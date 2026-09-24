@@ -1,0 +1,11 @@
+services:
+  - type: worker
+    name: nexura-whatsapp-bot
+    runtime: node
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: WWEBJS_DATA_PATH
+        value: /opt/render/project/src/.wwebjs_auth
