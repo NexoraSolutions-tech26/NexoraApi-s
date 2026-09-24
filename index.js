@@ -36,7 +36,9 @@ const client = new Client({
 });
 
 function randomReplyDelay() {
-  return 1500 + Math.floor(Math.random() * 1001);
+  const minimum = Number(process.env.REPLY_DELAY_MIN_MS || 300);
+  const maximum = Number(process.env.REPLY_DELAY_MAX_MS || 800);
+  return minimum + Math.floor(Math.random() * Math.max(1, maximum - minimum + 1));
 }
 
 function delay(milliseconds) {
