@@ -1,6 +1,5 @@
 const path = require('node:path');
 const qrcode = require('qrcode-terminal');
-const puppeteer = require('puppeteer');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 
 const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
@@ -14,7 +13,6 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -126,7 +124,7 @@ function getReply(messageText) {
       '4. الميزانية التقريبية',
       '5. الاسم والبريد الإلكتروني أو رقم التواصل',
       '',
-      'بعد استلام التفاصيل، سيتواصل معك فريقنا لترتيب اجتماع ومناقشة المشروع.',
+      'بعد استلاستلام التفاصيل، سيتواصل معك فريقنا لترتيب اجتماع ومناقشة المشروع.',
     ].join('\n');
   }
 
