@@ -1,17 +1,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { execFileSync } = require('node:child_process');
 const qrcode = require('qrcode-terminal');
 const puppeteer = require('puppeteer');
+const chromium = require('@sparticuz/chromium').default;
 const { Client, LocalAuth } = require('whatsapp-web.js');
 
-const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
-
-if (!process.env.PUPPETEER_EXECUTABLE_PATH && !fs.existsSync(executablePath)) {
-  execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['puppeteer', 'browsers', 'install', 'chrome'], {
-    stdio: 'inherit',
-  });
-}
+async function main() {
+  const puppeteerPath = puppeteer.executablePath();
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ||
+    (fs.existsSync(puppeteerPath) ? puppeteerPath : await chromium.executablePath());
 
 const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
 const GITHUB_URL = 'https://github.com/nexurtechpal-byte';
@@ -262,5 +259,11 @@ process.on('SIGTERM', async () => {
 
 client.initialize().catch((error) => {
   console.error('Failed to initialize WhatsApp client:', error);
+  process.exitCode = 1;
+});
+}
+
+main().catch((error) => {
+  console.error('Failed to prepare Chromium:', error);
   process.exitCode = 1;
 });
