@@ -2,10 +2,12 @@ services:
   - type: worker
     name: nexura-whatsapp-bot
     runtime: node
-    buildCommand: npm ci
+    buildCommand: npm ci && npx puppeteer browsers install chrome
     startCommand: npm start
     envVars:
       - key: NODE_VERSION
         value: "20"
       - key: WWEBJS_DATA_PATH
         value: /opt/render/project/src/.wwebjs_auth
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/project/src/.cache/puppeteer

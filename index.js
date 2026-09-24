@@ -1,5 +1,6 @@
 const path = require('node:path');
 const qrcode = require('qrcode-terminal');
+const puppeteer = require('puppeteer');
 const { Client, LocalAuth } = require('whatsapp-web.js');
 
 const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
@@ -13,14 +14,12 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
     ],
-    ...(process.env.PUPPETEER_EXECUTABLE_PATH
-      ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }
-      : {}),
   },
 });
 
