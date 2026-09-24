@@ -43,7 +43,7 @@ Never commit `.wwebjs_auth`, `.wwebjs_cache`, QR images, phone numbers, or crede
 ### Render
 
 1. Create a **Background Worker** from the GitHub repository.
-2. The included `render.yaml` clears both possible Puppeteer cache locations, runs `npm ci` without the automatic browser download, downloads stable Linux Chrome cleanly, and starts the bot with `npm start`.
+2. The included `render.yaml` clears both possible Puppeteer cache locations, explicitly sets `PUPPETEER_CACHE_DIR`, runs `npm ci` without the automatic browser download, downloads stable Linux Chrome cleanly, and starts the bot with `npm start`.
 3. Use a Node 20 runtime. Render may use its default Node version; an `engines` entry is included in `package.json`.
 4. Deploy and open the worker logs. Scan the printed QR code once from WhatsApp Business.
 5. Add a persistent disk mounted at `/opt/render/project/src/.wwebjs_auth` if the plan supports it. Without persistent storage, a restart or redeploy requires scanning a new QR code.
