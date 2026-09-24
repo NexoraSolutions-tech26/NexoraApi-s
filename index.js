@@ -14,11 +14,16 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--single-process',
+      '--disable-gpu',
     ],
   },
 });
@@ -84,7 +89,7 @@ function getReply(messageText) {
     ].join('\n');
   }
 
-  if (/(وين موقعكم|اين موقعكم|أين موقعكم|رابط الموقع|موقع الشركة|^الموقع$|^website$|^site$)/i.test(text)) {
+  if (/(وين موقعكم|اين موقعكم|أين موقعكم|رابط الموقع|موقع الشركة|^الموقع$|^website$\vert{}^site$)/i.test(text)) {
     return `هذا هو موقع Nexura Technologies:\n${WEBSITE_URL}`;
   }
 
