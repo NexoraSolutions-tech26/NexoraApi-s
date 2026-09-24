@@ -43,7 +43,7 @@ Never commit `.wwebjs_auth`, `.wwebjs_cache`, QR images, phone numbers, or crede
 ### Render
 
 1. Create a **Background Worker** from the GitHub repository.
-2. The included `render.yaml` clears both possible Puppeteer cache locations, explicitly sets `PUPPETEER_CACHE_DIR`, runs `npm ci` without the automatic browser download, downloads stable Linux Chrome cleanly, and starts the bot with `npm start`.
+2. The included `render.yaml` uses `Dockerfile`, which installs Linux Chromium from the system package manager and points Puppeteer to `/usr/bin/chromium`.
 3. Use a Node 20 runtime. Render may use its default Node version; an `engines` entry is included in `package.json`.
 4. Deploy and open the worker logs. Scan the printed QR code once from WhatsApp Business.
 5. Add a persistent disk mounted at `/opt/render/project/src/.wwebjs_auth` if the plan supports it. Without persistent storage, a restart or redeploy requires scanning a new QR code.
@@ -62,7 +62,7 @@ Railway currently uses usage-based billing/credits rather than promising an unli
 
 ### Chromium notes
 
-The Render build explicitly downloads a compatible Chrome binary and the script uses `puppeteer.executablePath()` unless `PUPPETEER_EXECUTABLE_PATH` is supplied. The script also supplies the common Linux flags for restricted containers. If Chromium fails to start, inspect the provider logs for missing system libraries or memory exhaustion; use a worker/container runtime rather than a serverless function.
+The Docker build installs Linux Chromium directly and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`, avoiding Puppeteer's browser-download cache. The script also supplies the common Linux flags for restricted containers. If Chromium fails to start, inspect the provider logs for missing system libraries or memory exhaustion; use a worker/container runtime rather than a serverless function.
 
 ## 5. Operational and account safety
 

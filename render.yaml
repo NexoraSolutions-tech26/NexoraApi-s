@@ -1,13 +1,11 @@
 services:
   - type: worker
     name: nexura-whatsapp-bot
-    runtime: node
-    buildCommand: rm -rf /opt/render/project/src/.cache/puppeteer /opt/render/.cache/puppeteer && PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer PUPPETEER_SKIP_DOWNLOAD=true npm ci && rm -rf /opt/render/project/src/.cache/puppeteer /opt/render/.cache/puppeteer && PUPPETEER_CACHE_DIR=/opt/render/project/src/.cache/puppeteer npx puppeteer browsers install chrome@stable --platform linux
-    startCommand: npm start
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     envVars:
       - key: NODE_VERSION
         value: "20"
       - key: WWEBJS_DATA_PATH
-        value: /opt/render/project/src/.wwebjs_auth
-      - key: PUPPETEER_CACHE_DIR
-        value: /opt/render/project/src/.cache/puppeteer
+        value: /app/.wwebjs_auth
