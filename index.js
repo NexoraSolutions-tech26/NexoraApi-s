@@ -1,7 +1,17 @@
+const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const qrcode = require('qrcode-terminal');
 const puppeteer = require('puppeteer');
 const { Client, LocalAuth } = require('whatsapp-web.js');
+
+const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
+
+if (!process.env.PUPPETEER_EXECUTABLE_PATH && !fs.existsSync(executablePath)) {
+  execFileSync(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['puppeteer', 'browsers', 'install', 'chrome'], {
+    stdio: 'inherit',
+  });
+}
 
 const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
 const GITHUB_URL = 'https://github.com/nexurtechpal-byte';
@@ -14,7 +24,7 @@ const client = new Client({
   }),
   puppeteer: {
     headless: true,
-    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    executablePath,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
