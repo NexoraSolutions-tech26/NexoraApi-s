@@ -26,19 +26,27 @@ async function main() {
   const puppeteerPath = puppeteer.executablePath();
   const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ||
     (fs.existsSync(puppeteerPath) ? puppeteerPath : await chromium.executablePath());
+  const authDataPath = path.resolve(
+    process.env.WWEBJS_DATA_PATH || path.join(__dirname, '.wwebjs_auth'),
+  );
 
 const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
 const GITHUB_URL = 'https://github.com/NexoraSolutions-tech26';
 const EMAIL = 'nexoratech.solutions@outlook.com';
+const pairingPhoneNumber = (process.env.WHATSAPP_PHONE_NUMBER || '').replace(/\D/g, '');
 
 const client = new Client({
+  pairWithPhoneNumber: {
+    phoneNumber: pairingPhoneNumber,
+  },
   authStrategy: new LocalAuth({
     clientId: 'nexura-technologies',
-    dataPath: process.env.WWEBJS_DATA_PATH || path.join(__dirname, '.wwebjs_auth'),
+    dataPath: authDataPath,
   }),
   puppeteer: {
     headless: true,
     executablePath,
+    dumpio: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -54,6 +62,9 @@ const client = new Client({
       '--disable-sync',
       '--disable-gpu',
       '--mute-audio',
+      '--disk-cache-size=33554432',
+      '--media-cache-size=1',
+      '--renderer-process-limit=1',
     ],
   },
 });
@@ -237,6 +248,10 @@ function getReply(messageText) {
 
 client.once('ready', () => {
   console.log('Nexura Technologies WhatsApp bot is ready.');
+});
+
+client.on('code', (code) => {
+  console.log('WhatsApp pairing code (enter it in Linked devices):', code);
 });
 
 client.on('qr', (qr) => {

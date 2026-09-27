@@ -44,7 +44,7 @@ Never commit `.wwebjs_auth`, `.wwebjs_cache`, QR images, phone numbers, or crede
 
 1. Create a **Web Service** from the GitHub repository, or create the service from the included `render.yaml` Blueprint.
 2. The Blueprint uses `Dockerfile`, installs Linux Chromium, and configures the service's `/health` check. The Express server binds to `0.0.0.0` and Render's `PORT`.
-3. Deploy and open the service logs. Scan the printed QR code once from WhatsApp Business.
+3. To pair without scanning a QR code, set `WHATSAPP_PHONE_NUMBER` in Render to the WhatsApp number in international format using digits only (country code plus number, without `+`). Redeploy, open the logs, then in WhatsApp Business choose **Linked devices > Link a device > Link with phone number instead** and enter the displayed pairing code. Treat that code like a password and do not share it. Leave the variable unset to use QR pairing instead.
 4. Add a persistent disk mounted at `/app/.wwebjs_auth` if the plan supports it. Without persistent storage, a restart or redeploy requires scanning a new QR code.
 
 The free plan's 512 MiB limit may still be too small for WhatsApp Web and Chromium. The browser flags and Node.js heap cap reduce memory use but cannot guarantee startup within that limit; if the service is killed for memory use, select a larger instance.
