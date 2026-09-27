@@ -11,8 +11,8 @@ async function main() {
     (fs.existsSync(puppeteerPath) ? puppeteerPath : await chromium.executablePath());
 
 const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
-const GITHUB_URL = 'https://github.com/nexurtechpal-byte';
-const EMAIL = 'nexurtechpal@gmail.com';
+const GITHUB_URL = 'https://github.com/NexoraSolutions-tech26';
+const EMAIL = 'nexoratech.solutions@outlook.com';
 
 const client = new Client({
   authStrategy: new LocalAuth({
