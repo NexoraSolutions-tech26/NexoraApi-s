@@ -1,17 +1,17 @@
 # Nexura Technologies WhatsApp Bot
 
-This bot uses `whatsapp-web.js`, `LocalAuth`, Puppeteer, and `qrcode-terminal`.
+This bot uses Baileys with multi-file authentication and an Express health endpoint. It does not launch a browser or print QR codes.
 
 ## 1. Local setup
 
-Install Node.js 20 or newer, then run:
+Install Node.js 20 or newer, set `WHATSAPP_PHONE_NUMBER` to the WhatsApp number in international format using digits only, then run:
 
 ```bash
 npm install
 npm start
 ```
 
-The first run prints a QR code. On the phone, open WhatsApp Business, go to **Settings > Linked devices > Link a device**, unlock the phone, and scan the terminal QR code. Keep the process running until `WhatsApp client is ready` appears. The login is stored in `.wwebjs_auth`, which is intentionally ignored by Git.
+On the first run, copy the 8-character pairing code from the console. On the phone, open WhatsApp Business and choose **Settings > Linked devices > Link a device > Link with phone number instead**, then enter the code. Keep the process running until `WhatsApp connected` appears. Credentials are stored as multiple files in `auth_info_baileys/`, which is intentionally ignored by Git. Treat the pairing code and auth directory as secrets.
 
 Test from another WhatsApp account with `hello`, `مرحبا`, `help`, `مساعدة`, `services`, `خدمات`, `الموقع`, `quote`, `سعر`, `عرض سعر`, `اجتماع`, `مكالمة`, `الفريق`, `support`, `دعم`, `links`, `روابط`, `شكرا`, or `باي`.
 
@@ -34,20 +34,22 @@ git remote add origin https://github.com/YOUR_ACCOUNT/YOUR_REPOSITORY.git
 git push -u origin main
 ```
 
-Never commit `.wwebjs_auth`, `.wwebjs_cache`, QR images, phone numbers, or credentials.
+Never commit `auth_info_baileys/`, phone numbers, pairing codes, or credentials.
 
 ## 4. Cloud deployment
 
-`whatsapp-web.js` drives WhatsApp Web in Chromium. A cloud service therefore needs a long-running Node.js service, enough memory for Chromium, and persistent storage for the `LocalAuth` directory.
+Baileys connects over WhatsApp's multi-device WebSocket protocol and does not require Chromium. A cloud service needs a long-running Node.js process and persistent storage for the multi-file auth directory if the session should survive redeploys.
 
 ### Render
 
 1. Create a **Web Service** from the GitHub repository, or create the service from the included `render.yaml` Blueprint.
-2. The Blueprint uses `Dockerfile`, installs Linux Chromium, and configures the service's `/health` check. The Express server binds to `0.0.0.0` and Render's `PORT`.
-3. To pair without scanning a QR code, set `WHATSAPP_PHONE_NUMBER` in Render to the WhatsApp number in international format using digits only (country code plus number, without `+`). Redeploy, open the logs, then in WhatsApp Business choose **Linked devices > Link a device > Link with phone number instead** and enter the displayed pairing code. Treat that code like a password and do not share it. Leave the variable unset to use QR pairing instead.
-4. Add a persistent disk mounted at `/app/.wwebjs_auth` if the plan supports it. Without persistent storage, a restart or redeploy requires scanning a new QR code.
+2. The Blueprint uses the lightweight Node.js `Dockerfile` and configures the service's `/health` check. The Express server binds to `0.0.0.0` and Render's `PORT`.
+3. Set `WHATSAPP_PHONE_NUMBER` to the WhatsApp number in international format using digits only (country code plus number, without `+`). On first startup, retrieve the 8-character pairing code from the service logs and enter it on the phone under **Linked devices > Link a device > Link with phone number instead**. Keep the code private.
+4. Attach persistent storage at `/app/auth_info_baileys` if the plan supports it. Without persistent storage, a restart or redeploy can require pairing again.
 
-The free plan's 512 MiB limit may still be too small for WhatsApp Web and Chromium. The browser flags and Node.js heap cap reduce memory use but cannot guarantee startup within that limit; if the service is killed for memory use, select a larger instance.
+Baileys uses substantially less memory than running WhatsApp Web in Chromium, but no free hosting plan guarantees continuous availability. Verify current plan limits before relying on it in production.
+
+Existing `whatsapp-web.js` LocalAuth sessions cannot be reused by Baileys; pair the Baileys client once to create its own auth state.
 
 Render free services are not a guaranteed 24/7 option and may sleep or have resource limits. Verify the current plan rules before relying on it for production.
 
@@ -55,19 +57,15 @@ Render free services are not a guaranteed 24/7 option and may sleep or have reso
 
 1. Create a Railway project from the GitHub repository.
 2. Set the start command to `npm start` if Railway does not detect it automatically.
-3. Set `WWEBJS_DATA_PATH` to `/app/.wwebjs_auth` (use the service's actual working directory if different).
-4. Deploy, open logs, and scan the printed QR code.
-5. Attach a persistent volume mounted at `/app/.wwebjs_auth`. Without a volume, redeploys can require QR re-authentication.
+3. Set `BAILEYS_AUTH_DIR` to `/app/auth_info_baileys` (use the service's actual working directory if different) and set `WHATSAPP_PHONE_NUMBER` for first-time pairing.
+4. Deploy, open logs, and enter the pairing code in WhatsApp Business.
+5. Attach a persistent volume mounted at `/app/auth_info_baileys`. Without a volume, redeploys can require pairing again.
 
 Railway currently uses usage-based billing/credits rather than promising an unlimited free, always-on worker. Check its current pricing and set a spending limit before deployment.
 
-### Chromium notes
-
-The Docker build installs Linux Chromium directly and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`, avoiding Puppeteer's browser-download cache. The script also supplies low-overhead Linux flags for restricted containers. If Chromium fails to start, inspect the provider logs for missing system libraries or memory exhaustion; use a long-running container service rather than a serverless function.
-
 ## 5. Operational and account safety
 
-- `whatsapp-web.js` is an unofficial WhatsApp Web automation library. WhatsApp can change its Web protocol or restrict an account using automation. Use a dedicated business number, obtain customer consent, keep replies low-volume, and follow WhatsApp's terms and messaging rules.
+- Baileys is an unofficial WhatsApp Web client library. WhatsApp can change its protocol or restrict accounts using automation. Use a dedicated business number, obtain customer consent, keep replies low-volume, and follow WhatsApp's terms and messaging rules.
 - The randomized 1.5-2.5 second delay is not a guarantee against spam detection.
 - Free hosting is not a guarantee of continuous availability. For dependable production uptime, use an always-on paid worker or WhatsApp's official Business Platform/API.
-- Treat the auth directory as a credential: anyone who obtains it may control the linked WhatsApp session.
+- Treat `auth_info_baileys/` as a credential: anyone who obtains it may control the linked WhatsApp session.

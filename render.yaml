@@ -9,7 +9,5 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: NODE_OPTIONS
-        value: --max-old-space-size=256
-      - key: WWEBJS_DATA_PATH
-        value: /app/.wwebjs_auth
+      - key: BAILEYS_AUTH_DIR
+        value: /app/auth_info_baileys

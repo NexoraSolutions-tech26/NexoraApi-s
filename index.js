@@ -1,10 +1,15 @@
-const fs = require('node:fs');
 const path = require('node:path');
-const qrcode = require('qrcode-terminal');
-const puppeteer = require('puppeteer');
-const chromium = require('@sparticuz/chromium').default;
 const express = require('express');
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const makeWASocket = require('@whiskeysockets/baileys').default;
+const { DisconnectReason, useMultiFileAuthState } = require('@whiskeysockets/baileys');
+
+const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
+const GITHUB_URL = 'https://github.com/NexoraSolutions-tech26';
+const EMAIL = 'nexoratech.solutions@outlook.com';
+const AUTH_DIRECTORY = path.resolve(
+  process.env.BAILEYS_AUTH_DIR || path.join(__dirname, 'auth_info_baileys'),
+);
+const PHONE_NUMBER = (process.env.WHATSAPP_PHONE_NUMBER || '').replace(/\D/g, '');
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -17,59 +22,10 @@ const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Health server listening on 0.0.0.0:${port}`);
 });
 
-function failStartup(message, error) {
-  console.error(message, error);
-  server.close(() => process.exit(1));
-}
-
-async function main() {
-  const configuredExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-  const puppeteerPath = puppeteer.executablePath();
-  const executablePath = configuredExecutablePath && fs.existsSync(configuredExecutablePath)
-    ? configuredExecutablePath
-    : fs.existsSync(puppeteerPath)
-      ? puppeteerPath
-      : await chromium.executablePath();
-  const authDataPath = path.resolve(
-    process.env.WWEBJS_DATA_PATH || path.join(__dirname, '.wwebjs_auth'),
-  );
-
-const WEBSITE_URL = 'https://nexurtechpal-byte.github.io/Nexura-/';
-const GITHUB_URL = 'https://github.com/NexoraSolutions-tech26';
-const EMAIL = 'nexoratech.solutions@outlook.com';
-const pairingPhoneNumber = (process.env.WHATSAPP_PHONE_NUMBER || '').replace(/\D/g, '');
-
-const client = new Client({
-  pairWithPhoneNumber: {
-    phoneNumber: pairingPhoneNumber,
-  },
-  authStrategy: new LocalAuth({
-    clientId: 'nexura-technologies',
-    dataPath: authDataPath,
-  }),
-  puppeteer: {
-    headless: true,
-    executablePath,
-    dumpio: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--disable-background-networking',
-      '--disable-component-update',
-      '--disable-default-apps',
-      '--disable-extensions',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-sync',
-      '--disable-gpu',
-      '--mute-audio',
-      '--disk-cache-size=33554432',
-      '--media-cache-size=1',
-    ],
-  },
-});
+let activeSocket;
+let reconnectTimer;
+let reconnectAttempts = 0;
+let shuttingDown = false;
 
 function randomReplyDelay() {
   const minimum = Number(process.env.REPLY_DELAY_MIN_MS || 300);
@@ -248,62 +204,102 @@ function getReply(messageText) {
   ].join('\n');
 }
 
-client.once('ready', () => {
-  console.log('Nexura Technologies WhatsApp bot is ready.');
-});
+function scheduleReconnect(reason) {
+  if (shuttingDown || reconnectTimer) return;
 
-client.on('code', (code) => {
-  console.log('WhatsApp pairing code (enter it in Linked devices):', code);
-});
+  const waitMs = Math.min(1000 * (2 ** reconnectAttempts), 30000);
+  reconnectAttempts += 1;
+  console.warn(`WhatsApp reconnect scheduled in ${waitMs}ms: ${reason}`);
 
-client.on('qr', (qr) => {
-  console.log('Scan this QR code with WhatsApp Business:');
-  qrcode.generate(qr, { small: true });
-});
-
-client.on('authenticated', () => {
-  console.log('WhatsApp authentication succeeded.');
-});
-
-client.on('auth_failure', (message) => {
-  console.error('WhatsApp authentication failed:', message);
-});
-
-client.on('disconnected', (reason) => {
-  console.warn('WhatsApp client disconnected:', reason);
-});
-
-client.on('message', async (message) => {
-  console.log(`Incoming message from ${message.from}: ${message.body}`);
-
-  if (message.fromMe) return;
-
-  const reply = getReply(message.body);
-  if (!reply) return;
-
-  try {
-    await delay(randomReplyDelay());
-    await message.reply(reply);
-  } catch (error) {
-    console.error('Failed to send reply:', error);
-  }
-});
-
-process.on('SIGINT', async () => {
-  await client.destroy();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await client.destroy();
-  process.exit(0);
-});
-
-client.initialize().catch((error) => {
-  failStartup('Failed to initialize WhatsApp client:', error);
-});
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = undefined;
+    try {
+      await startWhatsApp();
+    } catch (error) {
+      console.error('WhatsApp reconnect failed:', error);
+      scheduleReconnect(error.message);
+    }
+  }, waitMs);
 }
 
-main().catch((error) => {
-  failStartup('Failed to prepare Chromium:', error);
+async function startWhatsApp() {
+  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIRECTORY);
+
+  if (!state.creds.registered && !PHONE_NUMBER) {
+    throw new Error('Set WHATSAPP_PHONE_NUMBER before first-time pairing.');
+  }
+
+  const socket = makeWASocket({
+    auth: state,
+    printQRInTerminal: false,
+  });
+  activeSocket = socket;
+
+  socket.ev.on('creds.update', saveCreds);
+
+  socket.ev.on('connection.update', ({ connection, lastDisconnect }) => {
+    if (connection === 'open') {
+      reconnectAttempts = 0;
+      console.log('WhatsApp connected; Nexura bot is ready.');
+      return;
+    }
+
+    if (connection !== 'close') return;
+
+    activeSocket = undefined;
+    const statusCode = lastDisconnect?.error?.output?.statusCode;
+    if (statusCode === DisconnectReason.loggedOut) {
+      console.error('WhatsApp logged out. Clear the auth state and pair again.');
+      return;
+    }
+
+    scheduleReconnect(lastDisconnect?.error?.message || 'connection closed');
+  });
+
+  socket.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return;
+
+    for (const message of messages) {
+      const remoteJid = message.key.remoteJid;
+      const messageContent = message.message;
+      if (!remoteJid || remoteJid === 'status@broadcast' || message.key.fromMe || !messageContent) {
+        continue;
+      }
+
+      const body = messageContent.conversation ||
+        messageContent.extendedTextMessage?.text ||
+        messageContent.imageMessage?.caption ||
+        messageContent.videoMessage?.caption;
+      if (!body) continue;
+
+      try {
+        await delay(randomReplyDelay());
+        await socket.sendMessage(remoteJid, { text: getReply(body) }, { quoted: message });
+      } catch (error) {
+        console.error('Failed to send WhatsApp reply:', error);
+      }
+    }
+  });
+
+  if (!state.creds.registered) {
+    const pairingCode = await socket.requestPairingCode(PHONE_NUMBER);
+    console.log('WhatsApp pairing code (enter it in Linked devices):', pairingCode);
+  }
+}
+
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`Received ${signal}; shutting down.`);
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  activeSocket?.end(undefined);
+  server.close(() => process.exit(0));
+}
+
+process.once('SIGINT', () => void shutdown('SIGINT'));
+process.once('SIGTERM', () => void shutdown('SIGTERM'));
+
+startWhatsApp().catch((error) => {
+  console.error('Failed to start WhatsApp bot:', error);
+  server.close(() => process.exit(1));
 });
