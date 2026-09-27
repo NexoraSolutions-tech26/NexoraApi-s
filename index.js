@@ -23,9 +23,13 @@ function failStartup(message, error) {
 }
 
 async function main() {
+  const configuredExecutablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
   const puppeteerPath = puppeteer.executablePath();
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH ||
-    (fs.existsSync(puppeteerPath) ? puppeteerPath : await chromium.executablePath());
+  const executablePath = configuredExecutablePath && fs.existsSync(configuredExecutablePath)
+    ? configuredExecutablePath
+    : fs.existsSync(puppeteerPath)
+      ? puppeteerPath
+      : await chromium.executablePath();
   const authDataPath = path.resolve(
     process.env.WWEBJS_DATA_PATH || path.join(__dirname, '.wwebjs_auth'),
   );
@@ -58,13 +62,11 @@ const client = new Client({
       '--disable-extensions',
       '--no-first-run',
       '--no-zygote',
-      '--single-process',
       '--disable-sync',
       '--disable-gpu',
       '--mute-audio',
       '--disk-cache-size=33554432',
       '--media-cache-size=1',
-      '--renderer-process-limit=1',
     ],
   },
 });
