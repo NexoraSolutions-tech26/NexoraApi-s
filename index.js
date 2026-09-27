@@ -3,7 +3,24 @@ const path = require('node:path');
 const qrcode = require('qrcode-terminal');
 const puppeteer = require('puppeteer');
 const chromium = require('@sparticuz/chromium').default;
+const express = require('express');
 const { Client, LocalAuth } = require('whatsapp-web.js');
+
+const app = express();
+const port = Number(process.env.PORT) || 3000;
+
+app.get('/health', (_request, response) => {
+  response.status(200).send('ok');
+});
+
+const server = app.listen(port, '0.0.0.0', () => {
+  console.log(`Health server listening on 0.0.0.0:${port}`);
+});
+
+function failStartup(message, error) {
+  console.error(message, error);
+  server.close(() => process.exit(1));
+}
 
 async function main() {
   const puppeteerPath = puppeteer.executablePath();
@@ -27,10 +44,16 @@ const client = new Client({
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
       '--disable-accelerated-2d-canvas',
+      '--disable-background-networking',
+      '--disable-component-update',
+      '--disable-default-apps',
+      '--disable-extensions',
       '--no-first-run',
       '--no-zygote',
       '--single-process',
+      '--disable-sync',
       '--disable-gpu',
+      '--mute-audio',
     ],
   },
 });
@@ -260,12 +283,10 @@ process.on('SIGTERM', async () => {
 });
 
 client.initialize().catch((error) => {
-  console.error('Failed to initialize WhatsApp client:', error);
-  process.exitCode = 1;
+  failStartup('Failed to initialize WhatsApp client:', error);
 });
 }
 
 main().catch((error) => {
-  console.error('Failed to prepare Chromium:', error);
-  process.exitCode = 1;
+  failStartup('Failed to prepare Chromium:', error);
 });

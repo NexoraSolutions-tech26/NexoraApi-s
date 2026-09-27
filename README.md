@@ -38,15 +38,16 @@ Never commit `.wwebjs_auth`, `.wwebjs_cache`, QR images, phone numbers, or crede
 
 ## 4. Cloud deployment
 
-`whatsapp-web.js` drives WhatsApp Web in Chromium. A cloud service therefore needs a long-running worker, enough memory for Chromium, and persistent storage for the `LocalAuth` directory.
+`whatsapp-web.js` drives WhatsApp Web in Chromium. A cloud service therefore needs a long-running Node.js service, enough memory for Chromium, and persistent storage for the `LocalAuth` directory.
 
 ### Render
 
-1. Create a **Background Worker** from the GitHub repository.
-2. The included `render.yaml` uses `Dockerfile`, which installs Linux Chromium from the system package manager and points Puppeteer to `/usr/bin/chromium`.
-3. Use a Node 20 runtime. Render may use its default Node version; an `engines` entry is included in `package.json`.
-4. Deploy and open the worker logs. Scan the printed QR code once from WhatsApp Business.
-5. Add a persistent disk mounted at `/opt/render/project/src/.wwebjs_auth` if the plan supports it. Without persistent storage, a restart or redeploy requires scanning a new QR code.
+1. Create a **Web Service** from the GitHub repository, or create the service from the included `render.yaml` Blueprint.
+2. The Blueprint uses `Dockerfile`, installs Linux Chromium, and configures the service's `/health` check. The Express server binds to `0.0.0.0` and Render's `PORT`.
+3. Deploy and open the service logs. Scan the printed QR code once from WhatsApp Business.
+4. Add a persistent disk mounted at `/app/.wwebjs_auth` if the plan supports it. Without persistent storage, a restart or redeploy requires scanning a new QR code.
+
+The free plan's 512 MiB limit may still be too small for WhatsApp Web and Chromium. The browser flags and Node.js heap cap reduce memory use but cannot guarantee startup within that limit; if the service is killed for memory use, select a larger instance.
 
 Render free services are not a guaranteed 24/7 option and may sleep or have resource limits. Verify the current plan rules before relying on it for production.
 
@@ -62,7 +63,7 @@ Railway currently uses usage-based billing/credits rather than promising an unli
 
 ### Chromium notes
 
-The Docker build installs Linux Chromium directly and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`, avoiding Puppeteer's browser-download cache. The script also supplies the common Linux flags for restricted containers. If Chromium fails to start, inspect the provider logs for missing system libraries or memory exhaustion; use a worker/container runtime rather than a serverless function.
+The Docker build installs Linux Chromium directly and sets `PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium`, avoiding Puppeteer's browser-download cache. The script also supplies low-overhead Linux flags for restricted containers. If Chromium fails to start, inspect the provider logs for missing system libraries or memory exhaustion; use a long-running container service rather than a serverless function.
 
 ## 5. Operational and account safety
 

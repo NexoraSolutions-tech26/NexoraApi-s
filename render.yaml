@@ -1,11 +1,15 @@
 services:
-  - type: worker
+  - type: web
     name: nexura-whatsapp-bot
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     dockerContext: .
+    healthCheckPath: /health
     envVars:
       - key: NODE_VERSION
         value: "20"
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=256
       - key: WWEBJS_DATA_PATH
         value: /app/.wwebjs_auth
