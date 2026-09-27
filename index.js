@@ -246,6 +246,7 @@ async function startWhatsApp() {
 
     if (connection !== 'close') return;
 
+    if (activeSocket !== socket) return;
     activeSocket = undefined;
     const statusCode = lastDisconnect?.error?.output?.statusCode;
     if (statusCode === DisconnectReason.loggedOut) {
@@ -281,9 +282,25 @@ async function startWhatsApp() {
     }
   });
 
-  if (!state.creds.registered) {
-    const pairingCode = await socket.requestPairingCode(PHONE_NUMBER);
-    console.log('WhatsApp pairing code (enter it in Linked devices):', pairingCode);
+  if (!socket.authState.creds.registered) {
+    await delay(5000);
+
+    if (shuttingDown || activeSocket !== socket || socket.authState.creds.registered) return;
+
+    try {
+      const pairingCode = await socket.requestPairingCode(PHONE_NUMBER);
+      console.log('\n========== WHATSAPP PAIRING CODE ==========');
+      console.log(pairingCode);
+      console.log('Enter this code in WhatsApp > Linked devices.');
+      console.log('===========================================\n');
+    } catch (error) {
+      console.error('Pairing-code request failed; reconnecting:', error);
+      if (activeSocket === socket) {
+        activeSocket = undefined;
+        socket.end(error);
+        scheduleReconnect(error.message);
+      }
+    }
   }
 }
 
