@@ -258,12 +258,20 @@ async function startWhatsApp() {
   });
 
   socket.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
+    if (type !== 'notify') {
+      console.log(`Ignoring WhatsApp message event: type=${type}, count=${messages.length}`);
+      return;
+    }
 
     for (const message of messages) {
       const remoteJid = message.key.remoteJid;
       const messageContent = message.message;
+      const contentTypes = messageContent ? Object.keys(messageContent) : [];
       if (!remoteJid || remoteJid === 'status@broadcast' || message.key.fromMe || !messageContent) {
+        console.log(
+          `Ignoring WhatsApp message: fromMe=${Boolean(message.key.fromMe)}, ` +
+          `hasRemoteJid=${Boolean(remoteJid)}, hasContent=${Boolean(messageContent)}`,
+        );
         continue;
       }
 
@@ -271,11 +279,19 @@ async function startWhatsApp() {
         messageContent.extendedTextMessage?.text ||
         messageContent.imageMessage?.caption ||
         messageContent.videoMessage?.caption;
-      if (!body) continue;
+      if (!body) {
+        console.log(`WhatsApp message has no supported text or caption: types=${contentTypes.join(',')}`);
+        continue;
+      }
 
       try {
+        console.log(
+          `Received WhatsApp message: chat=${remoteJid.endsWith('@g.us') ? 'group' : 'direct'}, ` +
+          `content=${contentTypes.join(',')}, textLength=${body.length}`,
+        );
         await delay(randomReplyDelay());
         await socket.sendMessage(remoteJid, { text: getReply(body) }, { quoted: message });
+        console.log('WhatsApp reply sent successfully.');
       } catch (error) {
         console.error('Failed to send WhatsApp reply:', error);
       }
