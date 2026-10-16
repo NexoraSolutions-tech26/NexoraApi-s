@@ -80,6 +80,8 @@ function getReply(messageText) {
     ].join('\n');
   }
 
+  
+
   if (/(مين القائمين|مين القايمين|من القائمين|من يدير|الفريق|المؤسسين|المؤسسون|team|founders|management|owners)/i.test(text)) {
     return [
       'Nexura Technologies يديرها فريق متخصص في تطوير البرمجيات والحلول الرقمية.',
